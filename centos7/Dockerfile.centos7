@@ -1,0 +1,171 @@
+
+FROM centos:centos7.7.1908
+
+# base Rstudio installation
+
+# %post
+RUN yum-config-manager --setopt=gpgcheck=0 --save
+RUN yum-config-manager --add-repo http://yumrepos.med.harvard.edu/centos-7/epel/
+
+RUN yum install ca-certificates -y
+RUN yum install wget -y 
+RUN yum install bind-utils -y
+RUN yum install bzip2 -y
+RUN yum install bison -y
+RUN yum install dos2unix -y
+RUN yum install emacs -y
+RUN yum install finger -y
+RUN yum install gcc-c++ -y
+RUN yum install gcc-gfortran -y
+RUN yum install iftop -y
+RUN yum install iotop -y
+RUN yum install lsof -y
+RUN yum install lynx -y
+RUN yum install nano -y
+RUN yum install nethogs -y
+RUN yum install nmap -y
+RUN yum install nmon -y
+RUN yum install php-cli -y
+RUN yum install ruby-augeas -y
+RUN yum install screen -y
+RUN yum install subversion -y \
+	&& yum install subversion-tools -y
+RUN yum install sqlite -y \
+	&& yum install sqlite-devel -y
+RUN yum install strace -y
+RUN yum install sysstat -y
+RUN yum install tcpdump -y
+RUN yum install tcsh -y
+RUN yum install telnet -y
+RUN yum install tmux -y
+RUN yum install traceroute -y
+RUN yum install unzip -y
+RUN yum install valgrind -y
+RUN yum install vim -y
+RUN yum install yum-utils -y
+RUN yum install zip -y
+RUN yum install zsh -y
+RUN yum install autogen -y
+RUN yum install bzip2-devel -y
+RUN yum install dbus-x11 -y
+RUN yum install freetype -y \
+	&& yum install freetype-devel -y
+RUN yum install gmp-devel -y
+RUN yum install gnuplot -y
+RUN yum install gtk3-devel -y
+RUN yum install libcurl -y \
+	&& yum install libcurl-devel -y
+RUN yum install libedit-devel -y
+RUN yum install libffi-devel -y
+RUN yum install libicu -y \
+	&& yum install libicu-devel -y
+RUN yum install libjpeg-turbo-devel -y
+RUN yum install libmount-devel -y
+RUN yum install libmpc-devel -y
+RUN yum install librsvg2-devel -y
+RUN yum install libseccomp-devel -y
+RUN yum install libssh2-devel -y
+RUN yum install libXaw -y \
+	&& yum install libXaw-devel -y
+RUN yum install libXi -y \
+	&& yum install libXi-devel -y
+RUN yum install libxkbcommon-x11 -y
+RUN yum install libXpm-devel -y
+RUN yum install libXScrnSaver -y
+RUN yum install libxslt -y \
+	&& yum install libxslt-devel -y
+RUN yum install libXt-devel -y
+RUN yum install libzip-devel -y
+RUN yum install links -y
+RUN yum install lua-devel -y \
+	&& yum install lua-filesystem -y \
+	&& yum install lua-json -y \
+	&& yum install lua-posix -y \
+	&& yum install lua-term -y 
+RUN yum install lzo-devel -y
+RUN yum install mariadb -y \
+	&& yum install mariadb-devel -y
+RUN yum install mesa-libGLU -y \
+	&& yum install mesa-libGLU-devel -y \
+	&& yum install mesa-libGLw -y \
+	&& yum install mesa-libGLw-devel -y
+RUN yum install mc -y
+RUN yum install motif-devel -y
+RUN yum install mpfr-devel -y
+RUN yum install mutt -y
+RUN yum install openssl-devel -y
+RUN yum install p7zip -y \
+	&& yum install p7zip-plugins -y
+RUN yum install perl-devel -y \
+	&& yum install perl-Data-Dumper -y \
+	&& yum install perl-DBD-MySQL -y \
+	&& yum install perl-DBD-ODBC -y \
+	&& yum install perl-DBD-Pg -y \
+	&& yum install perl-DBI -y \
+	&& yum install perl-Number-Bytes-Human -y 
+RUN yum install poppler-utils -y 
+RUN yum install postgresql -y \
+	&& yum install postgresql-devel -y
+RUN yum install python-backports -y \
+	&& yum install python-backports-ssl_match_hostname -y \
+	&& yum install python-devel -y \
+	&& yum install python-pip -y \
+	&& yum install python-requests -y \
+	&& yum install python-setuptools -y \
+	&& yum install python-virtualenv -y 
+RUN yum install qt-x11 -y
+RUN yum install rcs -y
+RUN yum install readline-devel -y
+RUN yum install rpm-build -y
+RUN yum install squashfs-tools -y
+RUN yum install subversion-perl -y
+RUN yum install tcl -y \ 
+	&& yum install tcl-devel -y
+RUN yum install texinfo -y
+RUN yum install tk -y \
+	&& yum install tk-devel -y
+RUN yum install tree -y
+RUN yum install v8 -y \
+	&& yum install v8-devel -y
+RUN yum install xorg-x11-apps -y \
+	&& yum install xorg-x11-drv-ati-firmware -y \
+	&& yum install xorg-x11-drv-evdev -y \
+	&& yum install xorg-x11-drv-vesa -y \
+	&& yum install xorg-x11-drv-void -y \
+	&& yum install xorg-x11-font-utils -y \
+	&& yum install xorg-x11-fonts-100dpi -y \
+	&& yum install xorg-x11-fonts-75dpi -y \
+	&& yum install xorg-x11-fonts-ISO8859-1-100dpi -y \
+	&& yum install xorg-x11-fonts-ISO8859-1-75dpi -y \
+	&& yum install xorg-x11-fonts-misc -y \
+	&& yum install xorg-x11-fonts-Type1 -y \
+	&& yum install xorg-x11-proto-devel -y \
+	&& yum install xorg-x11-server-common -y \
+	&& yum install xorg-x11-server-devel -y \
+	&& yum install xorg-x11-server-utils -y \
+	&& yum install xorg-x11-server-Xorg -y \
+	&& yum install xorg-x11-server-Xvfb -y \
+	&& yum install xorg-x11-util-macros.noarch -y \
+	&& yum install xorg-x11-utils -y \
+	&& yum install xorg-x11-xauth -y
+RUN yum install xterm -y
+RUN yum install zlib-devel -y
+RUN yum install jq -y
+RUN yum install python2-pyyaml -y \
+	&& yum install python2-click -y \
+	&& yum install python3 -y \
+	&& yum install python36-PyYAML -y \
+	&& yum install python36-click -y \
+	&& yum install python36-requests -y \
+	&& yum install python2-pyyaml -y \
+	&& yum install python2-click -y \
+	&& yum install python3 -y \
+	&& yum install python36-PyYAML -y \
+	&& yum install python36-click -y \
+	&& yum install python36-requests -y
+
+RUN yum clean all
+
+# environment vars
+ENV LC_ALL=C
+

@@ -1,0 +1,252 @@
+
+# Spark 3.1.2 with Hadoop, SQL Server JDBC and Kerberos
+
+FROM ubuntu:20.04
+
+#------------------------------------------------------------------------------
+# Basic initial system configuration
+#------------------------------------------------------------------------------
+
+# install standard Ubuntu Server packages
+RUN yes | unminimize
+
+# we're going to create a non-root user at runtime and give the user sudo
+RUN apt-get update && \
+	apt-get -y install sudo \
+	&& echo "Set disable_coredump false" >> /etc/sudo.conf
+	
+# set locale info
+RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
+	&& apt-get update && apt-get install -y locales \
+	&& locale-gen en_US.utf8 \
+	&& /usr/sbin/update-locale LANG=en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV TZ=America/New_York
+
+WORKDIR /tmp
+
+#------------------------------------------------------------------------------
+# Install system tools and libraries via apt
+#------------------------------------------------------------------------------
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+	&& apt-get install \
+		-y \
+		#--no-install-recommends \
+		ca-certificates \
+		curl \
+		less \
+		libgomp1 \
+		libpango-1.0-0 \
+		libxt6 \
+		libsm6 \
+		make \
+		texinfo \
+		libtiff-dev \
+		libpng-dev \
+		libicu-dev \
+		libpcre3 \
+		libpcre3-dev \
+		libbz2-dev \
+		liblzma-dev \
+		gcc \
+		g++ \
+		openjdk-8-jre \
+		openjdk-8-jdk \
+		gfortran \
+		libreadline-dev \
+		libx11-dev \
+		libcurl4-openssl-dev \ 
+		libssl-dev \
+		libxml2-dev \
+		wget \
+		libtinfo5 \
+		xterm \
+		xauth \
+		screen \
+		tmux \
+		git \
+		libgit2-dev \
+		nano \
+		emacs \
+		vim \
+		man-db \
+		zsh \
+		unixodbc \
+		unixodbc-dev \
+		gnupg \
+		python3-dev \
+		python3 \ 
+		python3-pip \
+		alien \
+		libaio1 \
+		pkg-config \
+	    krb5-user \
+	   	libpam-krb5 \
+		libkrb5-dev \
+		unzip \
+		iputils-ping \
+		telnet \
+		net-tools \
+		ssh \
+		pdsh \
+	&& rm -rf /var/lib/apt/lists/*
+
+
+#------------------------------------------------------------------------------
+# Configure system tools
+#------------------------------------------------------------------------------
+
+# required for ssh and sshd	
+RUN mkdir /var/run/sshd	
+
+# configure X11
+RUN sed -i "s/^.*X11Forwarding.*$/X11Forwarding yes/" /etc/ssh/sshd_config \
+    && sed -i "s/^.*X11UseLocalhost.*$/X11UseLocalhost no/" /etc/ssh/sshd_config \
+    && grep "^X11UseLocalhost" /etc/ssh/sshd_config || echo "X11UseLocalhost no" >> /etc/ssh/sshd_config	
+
+# tell git to use the cache credential helper and set a 1 day-expiration
+RUN git config --system credential.helper 'cache --timeout 86400'
+
+#------------------------------------------------------------------------------
+# Install and configure database connectivity components
+#------------------------------------------------------------------------------
+
+# install MS SQL Server ODBC driver
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+	&& echo "deb [arch=amd64] https://packages.microsoft.com/ubuntu/18.04/prod bionic main" | tee /etc/apt/sources.list.d/mssql-release.list \
+	&& apt-get update \
+	&& ACCEPT_EULA=Y apt-get install msodbcsql17
+
+# install FreeTDS driver
+WORKDIR /tmp
+RUN wget ftp://ftp.freetds.org/pub/freetds/stable/freetds-1.1.40.tar.gz
+RUN tar zxvf freetds-1.1.40.tar.gz
+RUN cd freetds-1.1.40 && ./configure --enable-krb5 && make && make install
+RUN rm -r /tmp/freetds*
+
+# tell unixodbc where to find the FreeTDS driver shared object
+RUN echo '\n\
+[FreeTDS]\n\
+Driver = /usr/local/lib/libtdsodbc.so \n\
+' >> /etc/odbcinst.ini
+
+# install Oracle Instant Client and Oracle ODBC driver 
+ARG ORACLE_RELEASE=18
+ARG ORACLE_UPDATE=5
+ARG ORACLE_RESERVED=3
+
+RUN wget https://download.oracle.com/otn_software/linux/instantclient/${ORACLE_RELEASE}${ORACLE_UPDATE}000/oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-basic-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/${ORACLE_RELEASE}${ORACLE_UPDATE}000/oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-devel-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/${ORACLE_RELEASE}${ORACLE_UPDATE}000/oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-sqlplus-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/${ORACLE_RELEASE}${ORACLE_UPDATE}000/oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-odbc-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm
+
+RUN alien -i oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-basic-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm \
+   && alien -i oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-devel-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm \
+   && alien -i oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-sqlplus-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm \
+   && alien -i oracle-instantclient${ORACLE_RELEASE}.${ORACLE_UPDATE}-odbc-${ORACLE_RELEASE}.${ORACLE_UPDATE}.0.0.0-${ORACLE_RESERVED}.x86_64.rpm
+
+RUN rm oracle-instantclient*.rpm 
+
+# define the environment variables for oracle
+ENV LD_LIBRARY_PATH=/usr/lib/oracle/${ORACLE_RELEASE}.${ORACLE_UPDATE}/client64/lib/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
+    ORACLE_HOME=/usr/lib/oracle/${ORACLE_RELEASE}.${ORACLE_UPDATE}/client64 \
+    PATH=$PATH:$ORACLE_HOME/bin
+
+RUN echo "/usr/lib/oracle/${ORACLE_RELEASE}.${ORACLE_UPDATE}/client64/lib" | sudo tee /etc/ld.so.conf.d/oracle.conf
+
+# tell unixodbc where to find the Oracle driver shared object
+RUN echo '\n\
+[Oracle]\n\
+Driver = /usr/lib/oracle/'${ORACLE_RELEASE}'.'${ORACLE_UPDATE}'/client64/lib/libsqora.so.18.1 \n\
+' >> /etc/odbcinst.ini
+
+# install pyodbc
+RUN pip3 install pyodbc
+
+
+#------------------------------------------------------------------------------
+# Create dir for shell/pyspark scripts and set JAVA_HOME
+#------------------------------------------------------------------------------
+
+RUN mkdir -p /work
+
+ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64" \
+    PATH="${JAVA_HOME}/bin:$PATH" 
+
+
+#------------------------------------------------------------------------------
+# Install hadoop
+#------------------------------------------------------------------------------
+
+WORKDIR /opt/hadoop
+RUN wget https://downloads.apache.org/hadoop/common/hadoop-3.2.2/hadoop-3.2.2.tar.gz
+RUN tar zxvf hadoop-3.2.2.tar.gz
+RUN rm hadoop-3.2.2.tar.gz
+
+# copy hadoop/yarn config
+COPY hadoop/core-site.xml        /opt/hadoop/hadoop-3.2.2/etc/hadoop/.
+COPY hadoop/hdfs-site.xml        /opt/hadoop/hadoop-3.2.2/etc/hadoop/.
+COPY hadoop/hadoop-env.sh        /opt/hadoop/hadoop-3.2.2/etc/hadoop/.
+COPY hadoop/mapred-site.xml      /opt/hadoop/hadoop-3.2.2/etc/hadoop/.
+COPY hadoop/yarn-site.xml        /opt/hadoop/hadoop-3.2.2/etc/hadoop/.
+
+# expose default port for ResourceManager
+EXPOSE 8088
+
+# environment vars
+ENV HADOOP_HOME='/opt/hadoop/hadoop-3.2.2' \
+    HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop" \
+    HDFS_NAMENODE_USER=$USER \
+    HDFS_DATANODE_USER=$USER \
+    HDFS_SECONDARYNAMENODE_USER=$USER \
+    YARN_RESOURCEMANAGER_USER=$USER \
+    YARN_NODEMANAGER_USER=$USER \
+	PATH="${HADOOP_HOME}/sbin:${HADOOP_HOME}/bin:$PATH" 
+
+
+#------------------------------------------------------------------------------
+# Install spark and SQL Server JDBC
+#------------------------------------------------------------------------------
+
+# install spark
+WORKDIR /opt/spark
+RUN wget https://mirror.cogentco.com/pub/apache/spark/spark-3.1.2/spark-3.1.2-bin-hadoop3.2.tgz
+RUN tar zxvf spark-3.1.2-bin-hadoop3.2.tgz
+RUN rm spark-3.1.2-bin-hadoop3.2.tgz
+
+# copy spark config
+COPY spark/spark-env.sh        /opt/spark/spark-3.1.2-bin-hadoop3.2/conf/.
+COPY spark/spark-defaults.conf /opt/spark/spark-3.1.2-bin-hadoop3.2/conf/.
+
+# add SQL Server JDBC
+COPY mssql-jdbc-9.2.1.jre8.jar /opt/spark/spark-3.1.2-bin-hadoop3.2/jars/.
+
+# scripts for testing connection to SQL Server
+COPY startup_sing.sh   /work/.
+COPY onenode_sing.sh   /work/.
+COPY readTable_sing.py /work/.
+RUN chmod 777 /work/startup_sing.sh && \
+    chmod 777 /work/onenode_sing.sh && \
+    chmod 777 /work/readTable_sing.py 
+
+# env vars
+ENV SPARK_HOME="/opt/spark/spark-3.1.2-bin-hadoop3.2" \
+    PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:$PATH"
+	
+# expose ports
+EXPOSE 7077 8080
+
+
+#------------------------------------------------------------------------------
+# Final setup
+#------------------------------------------------------------------------------
+
+# add Kerberos config and keytab
+COPY krb5.conf /etc/.
+COPY ${USER}.keytab /work/.
+
+# set current directory
+WORKDIR /work

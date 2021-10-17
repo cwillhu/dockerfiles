@@ -1,0 +1,5 @@
+*~
+*.keytab
+*.jar
+krb5.conf
+temp/
